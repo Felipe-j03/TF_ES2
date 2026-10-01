@@ -31,6 +31,8 @@ services:
       MOODLE_SITENAME: Moodle-Reengajamento
     ports:
       - "8080:8080"
+      # Porta do acompanhamento, que compartilha a rede deste contêiner (ver abaixo)
+      - "8081:8081"
     volumes:
       - moodledata:/var/www/moodledata
       - moodlehtml:/var/www/html
@@ -53,6 +55,27 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+
+  acompanhamento:
+    build: ./acompanhamento
+    # O Moodle só responde pelo endereço configurado em SITE_URL (localhost:8080).
+    # Compartilhando a rede do contêiner do Moodle, "localhost:8080" aqui dentro
+    # também é o Moodle, igual a quando o serviço roda direto na máquina.
+    network_mode: service:moodle
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      moodle:
+        condition: service_started
+    environment:
+      MOODLE_URL: http://localhost:8080
+      MOODLE_URL_PUBLICA: http://localhost:8080
+      MOODLE_TOKEN: ${MOODLE_TOKEN}
+      MOODLE_CURSO_ID: ${MOODLE_CURSO_ID}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
+      ACOMPANHAMENTO_INTERVALO: ${ACOMPANHAMENTO_INTERVALO}
 
 volumes:
   moodle-db:

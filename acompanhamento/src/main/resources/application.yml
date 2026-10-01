@@ -1,0 +1,28 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: acompanhamento
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:reengajamento}
+    password: ${RABBITMQ_PASS:reengajamento}
+
+moodle:
+  url: ${MOODLE_URL:http://localhost:8080}
+  url-publica: ${MOODLE_URL_PUBLICA:http://localhost:8080}
+  token: ${MOODLE_TOKEN:}
+  curso-id: ${MOODLE_CURSO_ID:2}
+
+acompanhamento:
+  intervalo: ${ACOMPANHAMENTO_INTERVALO:PT1H}
+  agendamento:
+    habilitado: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
