@@ -1,0 +1,60 @@
+services:
+  moodle-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: moodle
+      POSTGRES_USER: moodle
+      POSTGRES_PASSWORD: ${MOODLE_DB_PASSWORD}
+    volumes:
+      - moodle-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moodle -d moodle"]
+      interval: 5s
+      retries: 20
+
+  moodle:
+    image: erseco/alpine-moodle:v5.2.3
+    depends_on:
+      moodle-db:
+        condition: service_healthy
+    environment:
+      DB_TYPE: pgsql
+      DB_HOST: moodle-db
+      DB_NAME: moodle
+      DB_USER: moodle
+      DB_PASS: ${MOODLE_DB_PASSWORD}
+      SITE_URL: http://localhost:8080
+      MOODLE_USERNAME: ${MOODLE_ADMIN_USER}
+      MOODLE_PASSWORD: ${MOODLE_ADMIN_PASSWORD}
+      MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
+      # O script de configuração da imagem não aceita espaços aqui
+      MOODLE_SITENAME: Moodle-Reengajamento
+    ports:
+      - "8080:8080"
+    volumes:
+      - moodledata:/var/www/moodledata
+      - moodlehtml:/var/www/html
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  moodle-db:
+  moodledata:
+  moodlehtml:
