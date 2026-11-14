@@ -1,5 +1,6 @@
 .env
 target/
+notificacoes/data/
 *.log
 .idea/
 .vscode/

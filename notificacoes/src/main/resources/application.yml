@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: notificacoes
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:reengajamento}
+    password: ${RABBITMQ_PASS:reengajamento}
+    listener:
+      simple:
+        default-requeue-rejected: false
+  datasource:
+    url: ${NOTIFICACOES_DB_URL:jdbc:h2:file:./data/notificacoes;AUTO_SERVER=TRUE}
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
+notificacoes:
+  remetente: ${NOTIFICACOES_REMETENTE:noreply@reengajamento.local}
+  max-tentativas: ${NOTIFICACOES_MAX_TENTATIVAS:5}
+  intervalo-retentativa: ${NOTIFICACOES_INTERVALO_RETENTATIVA:PT30S}

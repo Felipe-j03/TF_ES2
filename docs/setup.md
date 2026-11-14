@@ -1,117 +1,182 @@
-# Guia de instalação e uso
+# Guia completo: requisitos, execução e testes
 
-## Pré-requisitos
+Este guia cobre o fluxo inteiro: Moodle → acompanhamento → RabbitMQ → notificações → SMTP/Mailpit. O ambiente local usa apenas contas fictícias e não envia e-mails para alunos reais.
 
-- Docker Desktop. O Moodle sozinho usa perto de 1,5 GB de RAM; se o Docker tiver só 4 GB, desligue outros projetos enquanto trabalha neste.
-- Git Bash (vem com o Git para Windows), para rodar o script `.sh`.
-- Para desenvolver o microsserviço fora do Docker: JDK 21 e Maven 3.9.
+## 1. Requisitos
 
-## 1. Subir o ambiente
+### Para rodar o sistema completo
+
+- Docker Desktop ou Docker Engine com o plugin Docker Compose.
+- Pelo menos 4 GB de memória disponíveis para o Docker; o Moodle sozinho pode usar cerca de 1,5 GB.
+- Git Bash no Windows para executar `moodle/setup.sh`.
+
+### Para rodar os testes automatizados ou executar um serviço fora do Docker
+
+- JDK 21.
+- Maven 3.9 ou superior.
+
+Os testes automatizados usam dependências locais de teste e não precisam que Moodle, RabbitMQ ou Mailpit estejam ativos.
+
+## 2. Preparar a configuração
+
+Na raiz do repositório, copie o arquivo de exemplo:
 
 ```bash
 cp .env.example .env
+```
+
+Para a demonstração, mude `ACOMPANHAMENTO_INTERVALO` para `PT1M`. O padrão `PT1H` executa a consulta a cada hora. Os prazos das tarefas fictícias são calculados a partir do horário em que o script de configuração roda.
+
+O Mailpit é o SMTP local: `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, sem autenticação. Os e-mails aparecem em [http://localhost:8025](http://localhost:8025). O serviço não usa o SMTP próprio do Moodle.
+
+## 3. Subir os serviços de apoio
+
+Na raiz do projeto:
+
+```bash
 docker compose up -d moodle-db moodle rabbitmq mailpit
 docker compose logs -f moodle
 ```
 
-Na primeira vez o Moodle instala o banco, o que leva alguns minutos. Pode sair do `logs -f` (Ctrl+C) quando aparecer `ready to handle connections`.
+Na primeira inicialização, aguarde o Moodle concluir a instalação. Saia do acompanhamento de logs com Ctrl+C quando ele estiver pronto para receber requisições.
 
-| Serviço | Endereço | Login |
+| Componente | Endereço | Acesso local de demonstração |
 |---|---|---|
-| Moodle | http://localhost:8080 | `admin` / `Admin123!` |
-| RabbitMQ (painel) | http://localhost:15672 | `reengajamento` / `reengajamento` |
-| Mailpit (caixa de e-mail de teste) | http://localhost:8025 | sem login |
+| Moodle | [http://localhost:8080](http://localhost:8080) | Usuário e senha definidos no `.env` |
+| RabbitMQ | [http://localhost:15672](http://localhost:15672) | Usuário e senha definidos no `.env` |
+| Mailpit | [http://localhost:8025](http://localhost:8025) | Sem login |
 
-Se a porta 5672 ou 15672 já estiver em uso na sua máquina, mude `RABBITMQ_PORT` e `RABBITMQ_UI_PORT` no `.env`.
+As portas do RabbitMQ podem ser alteradas em `RABBITMQ_PORT` e `RABBITMQ_UI_PORT` no `.env`.
 
-## 2. Configurar o Moodle local
+## 4. Criar Moodle de demonstração
+
+Execute:
 
 ```bash
 bash moodle/setup.sh
 ```
 
-O script roda dentro do contêiner do Moodle e usa só a API interna dele. Nenhum plugin é instalado e nenhum arquivo do Moodle é alterado. Ele:
+O script habilita REST, cria a conta de serviço e o serviço externo do Moodle, matricula quatro alunos fictícios e prepara seis tarefas. Ele pode ser executado novamente: reaproveita os registros e atualiza os prazos relativos ao momento da execução.
 
-- habilita os webservices e o protocolo REST;
-- cria o usuário `ws_reengajamento`, matriculado como professor na disciplina, e o serviço externo "Reengajamento" com as três funções que usamos;
-- cria a disciplina `ES2DEMO` com os alunos `aluno1` a `aluno4` (e-mails `@example.com`);
-- cria cinco tarefas, uma para cada situação dos critérios de aceite.
+No final, copie as duas linhas impressas para o `.env`:
 
-| Tarefa | Prazo | Lembrete esperado |
-|---|---|---|
-| Tarefa pendente (vence em 2h) | daqui a 2 horas | sim, para os 4 alunos |
-| Tarefa fora da janela (3 dias) | daqui a 3 dias | não |
-| Tarefa sem prazo | nenhum | não |
-| Tarefa já vencida | ontem | não |
-| Tarefa com entrega (vence em 2h) | daqui a 2 horas | sim, menos para o aluno1, que já entregou |
-
-No final ele imprime duas linhas. Copie as duas para o `.env`:
-
-```
+```text
 MOODLE_TOKEN=...
-MOODLE_CURSO_ID=2
+MOODLE_CURSO_ID=...
 ```
 
-Pode rodar o script de novo quando quiser. Nada é duplicado, o token continua o mesmo e os prazos são recalculados a partir da hora atual, o que é útil porque a tarefa "vence em 2h" deixa de estar na janela no dia seguinte.
+Salve o arquivo antes de iniciar o acompanhamento. O token é local e não deve ser publicado.
 
-O Moodle local fica com o envio de e-mails próprios desligado (`noemailever`). Os lembretes do projeto saem pelo serviço de notificações, não pelo Moodle.
+| Tarefa preparada | Resultado esperado |
+|---|---|
+| Pendente, vence em 2 horas | Um lembrete para cada um dos quatro alunos |
+| Fora da janela, vence em 3 dias | Nenhum lembrete |
+| Sem prazo | Nenhum lembrete |
+| Já vencida | Nenhum lembrete |
+| Vence em 2 horas, com entrega do aluno1 | Três lembretes; o aluno1 não recebe |
+| Em grupo, vence em 2 horas | Nenhum lembrete |
 
-## 3. Rodar o acompanhamento
+## 5. Iniciar o fluxo completo
 
-### No Docker
+Construa e inicie os dois microsserviços:
 
 ```bash
+docker compose up -d --build acompanhamento notificacoes
+docker compose logs -f acompanhamento notificacoes
+```
+
+O acompanhamento espera 10 segundos antes da primeira verificação e depois usa o intervalo configurado. No `.env` de demonstração (`PT1M`), a primeira verificação deverá publicar solicitações em até alguns segundos. As demais verificações reapresentam a mesma chave por aluno/tarefa; o serviço de notificações ignora as que já foram enviadas.
+
+Abra [http://localhost:8025](http://localhost:8025). Com o Moodle recém-configurado, devem chegar **7 e-mails**: quatro da tarefa pendente e três da tarefa com entrega. Confira nome da tarefa, prazo em UTC e link no corpo da mensagem. As outras quatro combinações/tarefas de teste não devem gerar e-mail.
+
+O acompanhamento usa `network_mode: service:moodle` para alcançar o Moodle no endereço local configurado por ele. O notificações roda na rede padrão do Compose e alcança RabbitMQ e Mailpit pelos nomes `rabbitmq` e `mailpit`.
+
+## 6. Como verificar cada funcionalidade
+
+### Regra das 24 horas, status de entrega e tarefas individuais
+
+O script de demonstração cobre tarefas dentro e fora da janela, sem prazo, vencida, com uma entrega já enviada e em grupo. Compare a tabela da seção 4 com a caixa do Mailpit. O detector considera válido um prazo estritamente futuro e inclui o instante exato de `agora + 24h`. Um rascunho não é tratado como entrega concluída.
+
+### Integração com os webservices do Moodle
+
+Os testes automatizados de `MoodleRestClientTest` conferem os nomes das três funções REST, os parâmetros, o mapeamento de prazo/link/curso e a conversão da resposta de erro do Moodle. O teste do scheduler cobre a busca conjunta e a publicação. No fluxo manual, confirme nos logs do acompanhamento a contagem de tarefas, alunos, entregas e solicitações.
+
+### Chave de idempotência e persistência
+
+Deixe o acompanhamento completar pelo menos duas verificações, ou reinicie os serviços sem remover os volumes:
+
+```bash
+docker compose restart acompanhamento notificacoes
+```
+
+O Mailpit deve continuar com os mesmos sete e-mails. Nos logs do notificações, as solicitações repetidas aparecem como ignoradas. O estado `ENVIADO` e a chave ficam no banco H2 do volume `notificacoes-data`; o conteúdo com dados do aluno é apagado do registro após o sucesso.
+
+### Registro de falha e nova tentativa SMTP
+
+Faça este cenário em um ambiente de demonstração novo, antes de as solicitações serem concluídas. Outra opção é recriar o ambiente inteiro com `docker compose down -v` e repetir as seções 3 e 4; esse comando apaga os dados locais do Moodle e do notificações.
+
+Com o acompanhamento ainda parado, inicie o consumidor e interrompa o SMTP:
+
+```bash
+docker compose up -d --build notificacoes
+docker compose stop mailpit
 docker compose up -d --build acompanhamento
-docker compose logs -f acompanhamento
+docker compose logs -f notificacoes
 ```
 
-Com `ACOMPANHAMENTO_INTERVALO=PT1M` no `.env`, a verificação roda a cada minuto (o padrão é `PT1H`). Cada execução gera uma linha assim:
-
-```
-Verificação do curso 2: 5 tarefas, 4 alunos, 8 entregas, 0 solicitações publicadas
-```
-
-Enquanto o `DetectorPendencias` não for implementado, o número de solicitações fica em 0.
-
-### Pela IDE ou terminal
-
-Pare o contêiner (`docker compose stop acompanhamento`) e rode na pasta `acompanhamento/`:
+O log deve registrar falha de envio e o número da tentativa. Inicie o SMTP novamente:
 
 ```bash
-export MOODLE_TOKEN=<token> MOODLE_CURSO_ID=2 RABBITMQ_PORT=5672 SERVER_PORT=8082 ACOMPANHAMENTO_INTERVALO=PT1M
+docker compose start mailpit
+```
+
+Após o intervalo de retry configurado (`NOTIFICACOES_INTERVALO_RETENTATIVA`, 30 segundos por padrão), o scheduler deve reenviar as solicitações falhadas e os e-mails devem aparecer no Mailpit. O padrão permite até cinco tentativas no total: o primeiro envio e até quatro retries. Ao atingir o limite, a falha permanece registrada sem nova tentativa automática.
+
+## 7. Testes automatizados
+
+Na raiz do projeto, execute separadamente:
+
+```bash
+mvn -f acompanhamento/pom.xml test
+mvn -f notificacoes/pom.xml test
+```
+
+O módulo `acompanhamento` cobre:
+
+- `DetectorPendenciasTest`: prazo dentro/fora da janela, prazo ausente ou vencido, tarefas em grupo, entregas `submitted`, rascunhos, limites da janela e entradas duplicadas.
+- `MoodleRestClientTest`: parâmetros REST e mapeamento das respostas do Moodle.
+- `VerificacaoSchedulerTest`: sequência de chamadas e publicação; falhas de Moodle não publicam solicitações.
+- `SolicitacaoPublisherTest` e `SolicitacaoReengajamentoTest`: exchange/routing key, chave estável e JSON ISO-8601.
+- `AcompanhamentoApplicationTests`: inicialização do contexto.
+
+O módulo `notificacoes` cobre:
+
+- `NotificacaoServiceTest`: envio bem-sucedido, solicitação repetida, registro de erro e retry vencido.
+- `NotificacaoRepositoryTest`: unicidade persistente, prazo mínimo para retry e limite de tentativas, usando H2 em memória.
+- `SmtpNotificadorTest`: destinatário, assunto e conteúdo do lembrete.
+
+Os testes unitários não substituem a demonstração integrada com RabbitMQ e Mailpit das seções anteriores.
+
+## 8. Executar serviços fora do Docker (opcional)
+
+Mantenha Moodle, RabbitMQ e Mailpit ativos pelo Compose. Para executar o serviço notificações diretamente na máquina, use host local e banco em arquivo:
+
+```bash
+cd notificacoes
+mkdir -p data
+export RABBITMQ_HOST=localhost RABBITMQ_PORT=5672 RABBITMQ_USER=reengajamento RABBITMQ_PASS=reengajamento
+export SMTP_HOST=localhost SMTP_PORT=1025 NOTIFICACOES_DB_URL='jdbc:h2:file:./data/notificacoes'
 mvn spring-boot:run
 ```
 
-O `SERVER_PORT=8082` é necessário porque a 8081 continua reservada pelo contêiner do Moodle mesmo com o acompanhamento parado (veja a seção sobre a rede, mais abaixo). Use o mesmo valor de `RABBITMQ_PORT` que estiver no seu `.env`.
+Para o acompanhamento local, pare primeiro o contêiner `acompanhamento` e configure `MOODLE_TOKEN`, `MOODLE_CURSO_ID`, `MOODLE_URL=http://localhost:8080`, `MOODLE_URL_PUBLICA=http://localhost:8080`, `RABBITMQ_HOST=localhost` e `ACOMPANHAMENTO_INTERVALO=PT1M`. Rode `mvn spring-boot:run` a partir de `acompanhamento/`. A porta pode ser alterada com `SERVER_PORT=8082`, pois o Compose reserva a 8081.
 
-No IntelliJ, as mesmas variáveis vão em Run Configuration → Environment variables. Os testes rodam com `mvn test` e não precisam do Docker.
+Para usar um SMTP real, substitua `SMTP_HOST`, `SMTP_PORT` e as credenciais no ambiente; habilite `SMTP_AUTH=true` e `SMTP_STARTTLS=true` conforme os requisitos do provedor. Não use senhas reais no repositório.
 
-## Por que o acompanhamento usa a rede do contêiner do Moodle
+## 9. Solução de problemas
 
-O Moodle só aceita requisições feitas pelo endereço configurado como `SITE_URL` (`http://localhost:8080`). Chamado por outro nome, como `http://moodle:8080`, ele responde com um redirecionamento para `localhost:8080`, e dentro de um contêiner comum `localhost` é o próprio contêiner.
-
-Por isso o serviço `acompanhamento` usa `network_mode: service:moodle` no `docker-compose.yml`: ele compartilha a rede do contêiner do Moodle e acessa `localhost:8080` como faria rodando direto na máquina. A porta 8081 do acompanhamento aparece publicada no serviço `moodle` por causa disso.
-
-Testamos também o `$CFG->reverseproxy` do Moodle, mas com ele ativo o Moodle bloqueia o acesso direto pelo navegador.
-
-Isso só afeta o ambiente local. Em uma instalação real o Moodle tem um endereço público, e basta apontar `MOODLE_URL` para ele.
-
-## Configurar em um Moodle real
-
-Os passos equivalentes ao script, feitos pela interface por um administrador:
-
-1. Administração do site → Recursos avançados: ativar "Habilitar serviços web".
-2. Administração do site → Servidor → Serviços web → Gerenciar protocolos: habilitar REST.
-3. Criar um usuário para o serviço e dar a ele, em um papel de sistema, a permissão `webservice/rest:use`.
-4. Serviços web → Serviços externos: criar um serviço com as funções `mod_assign_get_assignments`, `core_enrol_get_enrolled_users` e `mod_assign_get_submissions`, marcando "Somente usuários autorizados" e autorizando o usuário criado.
-5. Serviços web → Gerenciar tokens: gerar um token para esse usuário e esse serviço.
-6. Matricular o usuário do serviço como professor na disciplina acompanhada. É isso que dá acesso às entregas e aos e-mails dos alunos.
-7. Conferir em Administração → Usuários → Permissões → Políticas do usuário se `showuseridentity` inclui o e-mail.
-
-## Problemas comuns
-
-- **Página do Moodle não abre logo depois do `up`:** a primeira inicialização demora. Acompanhe com `docker compose logs -f moodle`.
-- **Processos do PHP morrendo com `SIGKILL` nos logs:** falta memória no Docker. Pare outros contêineres.
-- **`invalidtoken` no log do acompanhamento:** o token do `.env` não bate com o do Moodle. Rode `bash moodle/setup.sh` e copie o token de novo.
-- **Alunos sem e-mail na resposta:** veja o passo 7 da seção anterior.
-- **Começar do zero:** `docker compose down -v` apaga os contêineres e os volumes (banco e dados do Moodle).
+- **Moodle ainda não responde:** a primeira inicialização pode levar alguns minutos. Consulte `docker compose logs -f moodle`.
+- **Token inválido:** execute novamente `bash moodle/setup.sh` e atualize `MOODLE_TOKEN` no `.env`.
+- **E-mail não aparece:** confira `docker compose logs notificacoes`, a caixa do Mailpit e se o SMTP está configurado como `mailpit:1025` para execução no Compose.
+- **Acompanhamento mostra erro de conexão com RabbitMQ:** espere o healthcheck do RabbitMQ concluir e consulte `docker compose ps`.
+- **Começar do zero:** `docker compose down -v` remove os volumes de Moodle e o histórico de idempotência do notificações; depois repita o setup.

@@ -1,18 +1,17 @@
 # Microsserviço de notificações
 
-Ainda não implementado. Este arquivo descreve o que o serviço precisa fazer e o que ele recebe do acompanhamento.
+Consome solicitações de `reengajamento.solicitacoes`, envia lembretes por SMTP e mantém um registro H2 persistente por `idempotencyKey`.
 
-## Responsabilidades
+## Comportamento
 
-- Consumir as solicitações da fila `reengajamento.solicitacoes`.
-- Montar o lembrete (nome da tarefa, prazo e link) e enviar por SMTP.
-- Registrar o resultado de cada envio, inclusive as falhas.
-- Não reenviar uma solicitação que já foi concluída. A chave para isso é o campo `idempotencyKey`, que identifica curso, tarefa e aluno.
-- Tentar de novo quando o envio falhar.
+- O e-mail inclui nome do aluno, tarefa, curso, prazo em UTC e link para a tarefa.
+- O estado `ENVIADO` impede que uma solicitação concluída seja enviada de novo, inclusive após reinício, enquanto o volume `notificacoes-data` for preservado.
+- Falhas SMTP são persistidas com erro, quantidade de tentativas e horário da próxima tentativa. O scheduler reprocessa falhas vencidas.
+- `NOTIFICACOES_MAX_TENTATIVAS` limita o total de envios, contando a primeira tentativa. O padrão é 5.
+- `NOTIFICACOES_INTERVALO_RETENTATIVA` define o intervalo entre retries. O padrão é 30 segundos.
+- Conteúdo de mensagem fica salvo enquanto há retry; ao concluir, o payload é apagado e ficam chave, estado, tentativas e horário.
 
-Os critérios de aceite 3 ("nenhum novo envio ao reprocessar uma solicitação concluída") e 4 ("registro de falhas e nova tentativa de processamento") dependem deste serviço.
-
-## Fila
+## Contrato RabbitMQ
 
 | Item | Valor |
 |---|---|
@@ -20,36 +19,20 @@ Os critérios de aceite 3 ("nenhum novo envio ao reprocessar uma solicitação c
 | Fila | `reengajamento.solicitacoes` (durável) |
 | Routing key | `solicitacao` |
 
-O acompanhamento declara a exchange, a fila e o binding ao subir. Declarar de novo no notificações, com os mesmos parâmetros, não causa problema.
+Datas são serializadas em ISO-8601/UTC. A chave usa o formato `cursoId:tarefaId:alunoId`; solicitações repetidas podem ser publicadas pelo acompanhamento a cada ciclo.
 
-## Mensagem
+O produtor envia o header `__TypeId__` com seu próprio nome de classe. O consumidor configura `TypePrecedence.INFERRED` para converter o JSON ao record local usado pelo listener.
 
-JSON, com datas em ISO-8601 (UTC):
+## Configuração
 
-```json
-{
-  "idempotencyKey": "2:1:4",
-  "cursoId": 2,
-  "cursoNome": "ES2 - Demonstração",
-  "tarefaId": 1,
-  "tarefaNome": "Tarefa pendente (vence em 2h)",
-  "prazo": "2026-10-01T15:31:38Z",
-  "linkTarefa": "http://localhost:8080/mod/assign/view.php?id=1",
-  "alunoId": 4,
-  "alunoNome": "Aluno Teste 1",
-  "alunoEmail": "aluno1@example.com",
-  "geradoEm": "2026-10-01T13:31:38Z"
-}
+No Docker Compose, o SMTP aponta para Mailpit (`mailpit:1025`) e o H2 usa o volume `/data`. Para execução local, use `localhost:1025` e um caminho de banco em arquivo. A configuração SMTP pode ser substituída por variáveis de ambiente `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH` e `SMTP_STARTTLS`.
+
+## Testar
+
+Testes sem serviços externos:
+
+```bash
+mvn -f notificacoes/pom.xml test
 ```
 
-A `idempotencyKey` segue o formato `cursoId:tarefaId:alunoId`. Como o acompanhamento roda de hora em hora, a mesma chave pode chegar mais de uma vez enquanto a tarefa estiver na janela de 24 horas. É responsabilidade deste serviço enviar só uma vez.
-
-O Spring AMQP do acompanhamento adiciona o header `__TypeId__` com o nome da classe Java de origem (`br.pucrs.es2.acompanhamento.mensageria.SolicitacaoReengajamento`). Se o notificações for feito em Spring e tiver a própria classe para a mensagem, configure o conversor para usar o tipo do parâmetro do listener em vez do header (`TypePrecedence.INFERRED`).
-
-## SMTP nos testes
-
-O Mailpit já sobe no `docker-compose.yml`:
-
-- de dentro da rede do compose: host `mailpit`, porta `1025`, sem autenticação;
-- rodando na máquina: `localhost:1025`;
-- os e-mails recebidos aparecem em http://localhost:8025.
+Para o fluxo integrado, siga o guia em [../docs/setup.md](../docs/setup.md), que inicia Moodle, RabbitMQ, este serviço e Mailpit e descreve como verificar deduplicação e retries.

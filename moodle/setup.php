@@ -100,17 +100,19 @@ cli_writeln('Disciplina e alunos prontos');
 // 5. Tarefas de teste (critérios de aceite)
 $agora = time();
 $tarefas = [
-    'Tarefa pendente (vence em 2h)'    => $agora + 2 * HOURSECS,
-    'Tarefa fora da janela (3 dias)'   => $agora + 3 * DAYSECS,
-    'Tarefa sem prazo'                 => 0,
-    'Tarefa já vencida'                => $agora - DAYSECS,
-    'Tarefa com entrega (vence em 2h)' => $agora + 2 * HOURSECS,
+    'Tarefa pendente (vence em 2h)'    => [$agora + 2 * HOURSECS, false],
+    'Tarefa fora da janela (3 dias)'   => [$agora + 3 * DAYSECS, false],
+    'Tarefa sem prazo'                 => [0, false],
+    'Tarefa já vencida'                => [$agora - DAYSECS, false],
+    'Tarefa com entrega (vence em 2h)' => [$agora + 2 * HOURSECS, false],
+    'Tarefa em grupo (vence em 2h)'    => [$agora + 2 * HOURSECS, true],
 ];
-foreach ($tarefas as $nome => $duedate) {
+foreach ($tarefas as $nome => [$duedate, $emGrupo]) {
     $existente = $DB->get_record('assign', ['course' => $course->id, 'name' => $nome]);
     if ($existente) {
         // Mantém os prazos relativos a "agora" a cada execução
         $DB->set_field('assign', 'duedate', $duedate, ['id' => $existente->id]);
+        $DB->set_field('assign', 'teamsubmission', $emGrupo ? 1 : 0, ['id' => $existente->id]);
         continue;
     }
     $generator->create_module('assign', [
@@ -121,12 +123,12 @@ foreach ($tarefas as $nome => $duedate) {
         'cutoffdate' => 0,
         'gradingduedate' => 0,
         'submissiondrafts' => 0,
-        'teamsubmission' => 0,
+        'teamsubmission' => $emGrupo ? 1 : 0,
         'assignsubmission_onlinetext_enabled' => 1,
     ]);
 }
 
-// Entrega do aluno1 na última tarefa
+// Entrega do aluno1 na tarefa com entrega
 $assignrec = $DB->get_record('assign', ['course' => $course->id, 'name' => 'Tarefa com entrega (vence em 2h)'], '*', MUST_EXIST);
 $cm = get_coursemodule_from_instance('assign', $assignrec->id, $course->id, false, MUST_EXIST);
 $assign = new assign(context_module::instance($cm->id), $cm, $course);

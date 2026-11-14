@@ -8,7 +8,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Decide quais alunos devem receber lembrete.
@@ -26,7 +29,38 @@ public class DetectorPendencias {
 
     public List<SolicitacaoReengajamento> detectar(List<Tarefa> tarefas, List<Aluno> alunos,
                                                    List<Entrega> entregas, Instant agora) {
-        // TODO: implementar as regras acima e reativar os testes em DetectorPendenciasTest
-        return List.of();
+        Set<ChaveEntrega> entregasEnviadas = new HashSet<>();
+        for (Entrega entrega : entregas) {
+            if (entrega.enviada()) {
+                entregasEnviadas.add(new ChaveEntrega(entrega.tarefaId(), entrega.alunoId()));
+            }
+        }
+
+        Instant limite = agora.plus(JANELA);
+        List<SolicitacaoReengajamento> solicitacoes = new ArrayList<>();
+        Set<String> chavesPublicadas = new HashSet<>();
+
+        for (Tarefa tarefa : tarefas) {
+            if (tarefa.prazo() == null || tarefa.emGrupo()
+                    || !tarefa.prazo().isAfter(agora) || tarefa.prazo().isAfter(limite)) {
+                continue;
+            }
+
+            for (Aluno aluno : alunos) {
+                if (entregasEnviadas.contains(new ChaveEntrega(tarefa.id(), aluno.id()))) {
+                    continue;
+                }
+
+                SolicitacaoReengajamento solicitacao = SolicitacaoReengajamento.de(tarefa, aluno, agora);
+                if (chavesPublicadas.add(solicitacao.idempotencyKey())) {
+                    solicitacoes.add(solicitacao);
+                }
+            }
+        }
+
+        return List.copyOf(solicitacoes);
+    }
+
+    private record ChaveEntrega(long tarefaId, long alunoId) {
     }
 }

@@ -56,6 +56,30 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  notificacoes:
+    build: ./notificacoes
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-false}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      NOTIFICACOES_DB_URL: jdbc:h2:file:/data/notificacoes;AUTO_SERVER=TRUE
+      NOTIFICACOES_REMETENTE: ${NOTIFICACOES_REMETENTE:-noreply@reengajamento.local}
+      NOTIFICACOES_MAX_TENTATIVAS: ${NOTIFICACOES_MAX_TENTATIVAS:-5}
+      NOTIFICACOES_INTERVALO_RETENTATIVA: ${NOTIFICACOES_INTERVALO_RETENTATIVA:-PT30S}
+    volumes:
+      - notificacoes-data:/data
+
   acompanhamento:
     build: ./acompanhamento
     # O Moodle só responde pelo endereço configurado em SITE_URL (localhost:8080).
@@ -81,3 +105,4 @@ volumes:
   moodle-db:
   moodledata:
   moodlehtml:
+  notificacoes-data:
