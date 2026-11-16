@@ -48,6 +48,8 @@ Na primeira inicialização, o Moodle instala o banco e em seguida executa autom
 
 As portas do RabbitMQ podem ser alteradas em `RABBITMQ_PORT` e `RABBITMQ_UI_PORT` no `.env`.
 
+O Moodle é instalado com a interface em português (`MOODLE_LANGUAGE: pt_br` no `docker-compose.yml`), o que exige acesso à internet na primeira instalação para baixar o pacote de idioma. Em um Moodle já instalado, o idioma muda em *Administração do site → Idioma → Pacotes de idiomas*.
+
 ## 4. O que o setup do Moodle cria
 
 O `moodle/setup.php` habilita REST, cria a conta de serviço e o serviço externo com as três funções, define o token a partir de `MOODLE_TOKEN`, matricula quatro alunos fictícios e prepara seis tarefas. Ele é idempotente: reaproveita os registros e **atualiza os prazos relativos ao momento da execução**, o que acontece a cada vez que o contêiner do Moodle inicia. Para renovar os prazos manualmente, rode `bash moodle/setup.sh` (Git Bash no Windows).

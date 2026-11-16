@@ -29,6 +29,7 @@ services:
       MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
       # O script de configuração da imagem não aceita espaços aqui
       MOODLE_SITENAME: Moodle-Reengajamento
+      MOODLE_LANGUAGE: pt_br
       # Depois da instalação, a imagem executa o setup.php (idempotente): habilita o REST,
       # cria o serviço externo, o token, a disciplina de demonstração, os alunos e as tarefas
       WS_TOKEN: ${MOODLE_TOKEN:-reengajamento-local-token-es2-01}
