@@ -32,10 +32,11 @@ Moodle --REST--> acompanhamento --RabbitMQ--> notificações --SMTP--> Mailpit/e
 ## Início rápido
 
 1. Copie `.env.example` para `.env`.
-2. Inicie Moodle, PostgreSQL, RabbitMQ e Mailpit com `docker compose up -d moodle-db moodle rabbitmq mailpit`.
-3. Rode `bash moodle/setup.sh` e copie `MOODLE_TOKEN` e `MOODLE_CURSO_ID` para `.env`.
-4. Rode `docker compose up -d --build acompanhamento notificacoes`.
-5. Acompanhe `docker compose logs -f acompanhamento notificacoes` e confira os e-mails em [http://localhost:8025](http://localhost:8025).
+2. Rode `docker compose up -d --build`.
+3. Aguarde de 3 a 6 minutos na primeira vez: o Moodle se instala e o `moodle/setup.php` cria o serviço REST, o token, os alunos e as tarefas de demonstração. Os serviços de acompanhamento e notificações só iniciam quando o Moodle fica saudável (`docker compose ps`).
+4. Acompanhe `docker compose logs -f acompanhamento notificacoes` e confira os e-mails em [http://localhost:8025](http://localhost:8025).
+
+Um único comando sobe tudo. O token do serviço REST é fixo e local (`MOODLE_TOKEN` no `.env`), então não é preciso copiar nada. `bash moodle/setup.sh` continua disponível para reaplicar a configuração do Moodle e renovar os prazos das tarefas de teste.
 
 O passo a passo completo e os resultados esperados de cada cenário estão em [docs/setup.md](docs/setup.md).
 

@@ -29,6 +29,10 @@ services:
       MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
       # O script de configuração da imagem não aceita espaços aqui
       MOODLE_SITENAME: Moodle-Reengajamento
+      # Depois da instalação, a imagem executa o setup.php (idempotente): habilita o REST,
+      # cria o serviço externo, o token, a disciplina de demonstração, os alunos e as tarefas
+      WS_TOKEN: ${MOODLE_TOKEN:-reengajamento-local-token-es2-01}
+      POST_CONFIGURE_COMMANDS: php /setup.php
     ports:
       - "8080:8080"
       # Porta do acompanhamento, que compartilha a rede deste contêiner (ver abaixo)
@@ -36,6 +40,14 @@ services:
     volumes:
       - moodledata:/var/www/moodledata
       - moodlehtml:/var/www/html
+      - ./moodle/setup.php:/setup.php:ro
+    # Só fica saudável depois da instalação e do setup, quando o servidor web passa a responder
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:8080/login/index.php"]
+      interval: 10s
+      timeout: 10s
+      retries: 90
+      start_period: 60s
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
@@ -90,16 +102,16 @@ services:
       rabbitmq:
         condition: service_healthy
       moodle:
-        condition: service_started
+        condition: service_healthy
     environment:
       MOODLE_URL: http://localhost:8080
       MOODLE_URL_PUBLICA: http://localhost:8080
-      MOODLE_TOKEN: ${MOODLE_TOKEN}
-      MOODLE_CURSO_ID: ${MOODLE_CURSO_ID}
+      MOODLE_TOKEN: ${MOODLE_TOKEN:-reengajamento-local-token-es2-01}
+      MOODLE_CURSO_ID: ${MOODLE_CURSO_ID:-2}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASS: ${RABBITMQ_PASS}
-      ACOMPANHAMENTO_INTERVALO: ${ACOMPANHAMENTO_INTERVALO}
+      ACOMPANHAMENTO_INTERVALO: ${ACOMPANHAMENTO_INTERVALO:-PT1M}
 
 volumes:
   moodle-db:

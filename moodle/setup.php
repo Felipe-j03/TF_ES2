@@ -74,6 +74,14 @@ $token = $DB->get_field('external_tokens', 'token', ['externalserviceid' => $ser
 if (!$token) {
     $token = \core_external\util::generate_token(EXTERNAL_TOKEN_PERMANENT, $service, $wsuser->id, $syscontext);
 }
+// Se WS_TOKEN estiver definido (docker compose), o token passa a ter esse valor fixo,
+// para o acompanhamento não depender de copiar um token gerado aleatoriamente.
+$tokenfixo = getenv('WS_TOKEN');
+if ($tokenfixo !== false && $tokenfixo !== '' && $tokenfixo !== $token) {
+    $DB->set_field('external_tokens', 'token', $tokenfixo,
+        ['externalserviceid' => $service->id, 'userid' => $wsuser->id]);
+    $token = $tokenfixo;
+}
 cli_writeln('Serviço externo e token prontos');
 
 // 4. Disciplina e matrículas
