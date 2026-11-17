@@ -11,7 +11,7 @@ Este documento registra a execução dos testes do serviço de reengajamento: os
 | Moodle | `erseco/alpine-moodle:v5.2.3` com PostgreSQL 16 |
 | Mensageria / SMTP | RabbitMQ 4 e Mailpit |
 | Microsserviços | Java 21 (JDK 21.0.3 local; imagem `eclipse-temurin:21`), Spring Boot 4.1.1 |
-| Configuração | `.env.example` sem alterações; intervalo de verificação `PT1M`; retry a cada 30 s, até 5 tentativas |
+| Configuração | `.env.example` com `ACOMPANHAMENTO_INTERVALO=PT1M` (o arquivo traz `PT1H`; o intervalo curto serve à demonstração); retry a cada 30 s, até 5 tentativas |
 | Estado inicial | Ambiente criado do zero (`docker compose down -v` e depois `docker compose up -d --build`) |
 
 ## 2. Dados de teste
