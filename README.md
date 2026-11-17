@@ -8,7 +8,7 @@ Trabalho de Engenharia de Software II (PUCRS, 2026/2). O sistema acompanha taref
 - Ignora tarefas sem prazo, vencidas, fora da janela de 24 horas ou configuradas para entrega em grupo.
 - Não solicita lembrete para aluno cuja entrega esteja com status `submitted`; rascunhos não contam como entrega concluída.
 - Publica solicitações JSON no RabbitMQ com uma chave estável por curso, tarefa e aluno.
-- Envia e-mails de texto com nome da tarefa, prazo em UTC e link de acesso.
+- Envia e-mails de texto com nome da tarefa, prazo no horário de Brasília e link de acesso.
 - Registra o estado de cada envio em um banco H2 persistente, não repete envios concluídos e agenda nova tentativa para falhas temporárias.
 - Inclui ambiente local com Moodle, PostgreSQL, RabbitMQ e Mailpit.
 

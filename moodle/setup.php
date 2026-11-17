@@ -15,6 +15,10 @@ $generator = testing_util::get_data_generator();
 // O Moodle local não envia e-mails próprios (boas-vindas etc.); os lembretes são enviados pelo serviço de notificações
 set_config('noemailever', 1);
 
+// Fuso do servidor: o Moodle exibe prazos neste fuso (o padrão da imagem é Europe/London)
+set_config('timezone', 'America/Sao_Paulo');
+set_config('forcetimezone', '99');
+
 // 1. Webservices + REST
 set_config('enablewebservices', 1);
 $protocolos = array_filter(explode(',', get_config('core', 'webserviceprotocols') ?: ''));

@@ -91,4 +91,4 @@ Ao montar o ambiente com um único `docker compose up`, a imagem do `notificacoe
 - Os testes automatizados são unitários; o fluxo com RabbitMQ e SMTP reais é verificado manualmente, conforme a seção 3.
 - `SolicitacaoConsumer` e `RetentativaScheduler` não têm teste unitário próprio; são exercitados pelos cenários dos critérios 3 e 4.
 - Uma solicitação que atinge o limite de tentativas permanece registrada como `FALHOU`, sem alerta e sem nova tentativa automática.
-- O prazo no e-mail é exibido em UTC.
+- O prazo no e-mail é exibido no horário de Brasília, fixo; o serviço não conhece o fuso de cada aluno.

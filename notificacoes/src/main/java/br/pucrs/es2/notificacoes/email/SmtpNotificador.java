@@ -6,14 +6,14 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 @Component
 public class SmtpNotificador {
 
     private static final DateTimeFormatter PRAZO_FORMATADO =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm 'UTC'").withZone(ZoneOffset.UTC);
+            DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm '(Brasília)'").withZone(ZoneId.of("America/Sao_Paulo"));
 
     private final JavaMailSender mailSender;
     private final NotificacoesProperties props;

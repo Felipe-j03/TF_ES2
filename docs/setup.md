@@ -75,7 +75,7 @@ docker compose logs -f acompanhamento notificacoes
 
 O acompanhamento espera 10 segundos antes da primeira verificação e depois usa o intervalo configurado (`PT1M` na demonstração; defina `PT1H` no `.env` para o uso real). A primeira verificação deverá publicar solicitações em até alguns segundos. As demais verificações reapresentam a mesma chave por aluno/tarefa; o serviço de notificações ignora as que já foram enviadas.
 
-Abra [http://localhost:8025](http://localhost:8025). Com o Moodle recém-configurado, devem chegar **7 e-mails**: quatro da tarefa pendente e três da tarefa com entrega. Confira nome da tarefa, prazo em UTC e link no corpo da mensagem. As outras quatro combinações/tarefas de teste não devem gerar e-mail.
+Abra [http://localhost:8025](http://localhost:8025). Com o Moodle recém-configurado, devem chegar **7 e-mails**: quatro da tarefa pendente e três da tarefa com entrega. Confira nome da tarefa, prazo no horário de Brasília e link no corpo da mensagem. As outras quatro combinações/tarefas de teste não devem gerar e-mail.
 
 O acompanhamento usa `network_mode: service:moodle` para alcançar o Moodle no endereço local configurado por ele. O notificações roda na rede padrão do Compose e alcança RabbitMQ e Mailpit pelos nomes `rabbitmq` e `mailpit`.
 

@@ -32,6 +32,6 @@ class SmtpNotificadorTest {
         assertThat(email.getFrom()).isEqualTo("noreply@example.com");
         assertThat(email.getTo()).containsExactly("ana@example.com");
         assertThat(email.getSubject()).contains("T1");
-        assertThat(email.getText()).contains("ES2", "01/10/2026 às 14:00 UTC", "http://localhost/tarefa");
+        assertThat(email.getText()).contains("ES2", "01/10/2026 às 11:00 (Brasília)", "http://localhost/tarefa");
     }
 }

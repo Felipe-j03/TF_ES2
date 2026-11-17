@@ -4,7 +4,7 @@ Consome solicitações de `reengajamento.solicitacoes`, envia lembretes por SMTP
 
 ## Comportamento
 
-- O e-mail inclui nome do aluno, tarefa, curso, prazo em UTC e link para a tarefa.
+- O e-mail inclui nome do aluno, tarefa, curso, prazo no horário de Brasília e link para a tarefa.
 - O estado `ENVIADO` impede que uma solicitação concluída seja enviada de novo, inclusive após reinício, enquanto o volume `notificacoes-data` for preservado.
 - Falhas SMTP são persistidas com erro, quantidade de tentativas e horário da próxima tentativa. O scheduler reprocessa falhas vencidas.
 - `NOTIFICACOES_MAX_TENTATIVAS` limita o total de envios, contando a primeira tentativa. O padrão é 5.
