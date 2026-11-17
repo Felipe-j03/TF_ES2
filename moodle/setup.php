@@ -98,7 +98,11 @@ foreach ([1, 2, 3, 4] as $n) {
         $u = $generator->create_user([
             'username' => "aluno$n", 'firstname' => 'Aluno', 'lastname' => "Teste $n",
             'email' => "aluno$n@example.com",
+            'password' => 'Aluno123!',
         ]);
+    } else {
+        // Contas fictícias do ambiente local: senha conhecida para entrar como aluno na demonstração
+        update_internal_user_password($u, 'Aluno123!');
     }
     $generator->enrol_user($u->id, $course->id, 'student');
     $alunos[$n] = $u;

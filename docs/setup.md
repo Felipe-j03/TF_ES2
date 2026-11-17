@@ -56,6 +56,8 @@ O `moodle/setup.php` habilita REST, cria a conta de serviço e o serviço extern
 
 O token é local e fixo (`MOODLE_TOKEN`, valor padrão `reengajamento-local-token-es2-01`) e a disciplina de demonstração tem id 2 (`MOODLE_CURSO_ID`). Não use esses valores fora do ambiente local.
 
+Os alunos fictícios (`aluno1` a `aluno4`) têm a senha `Aluno123!`, para entrar em http://localhost:8080 como aluno e ver as tarefas na própria conta. Também é valor apenas local.
+
 | Tarefa preparada | Resultado esperado |
 |---|---|
 | Pendente, vence em 2 horas | Um lembrete para cada um dos quatro alunos |
